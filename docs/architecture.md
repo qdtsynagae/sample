@@ -6,47 +6,43 @@ This dummy repo follows a simple layered architecture.
 
 ```mermaid
 flowchart TB
-  subgraph Presentation[presentation - FastAPI]
-    R[Routers]
-    S[Schemas]
+  subgraph Build[CI/CD and Release]
+    SRC[Git repository]
+    IMG[Build container image]
   end
 
-  subgraph Domain[domain - Business rules]
-    M[Models: Value Objects and Entities]
-    E[Domain Errors]
-    SV[domain/services]
+  subgraph Migrations[Alembic schema versioning]
+    ENV[alembic/env.py]
+    VER[alembic/versions/*]
+    CMD[alembic upgrade head]
   end
 
-  subgraph DataAccess[data_access - Persistence]
-    DB[db/session.py]
-    T[models - SQLModel tables]
-    Repo[repositories - SQL and mapping]
-    SQLF[repositories/sql files]
+  subgraph App[Runtime application]
+    API[FastAPI app]
+    DBSESS[data_access/db/session.py]
+    REPO[data_access/repositories]
   end
 
-  subgraph Migrations[alembic - schema versioning]
-    A1[alembic/env.py]
-    A2[alembic/versions/*]
-  end
+  PG[(PostgreSQL)]
 
-  R --> S
-  R -->|Depends get_session| DB
-  R -->|calls| SV
+  SRC --> IMG
+  SRC --> VER
+  ENV -->|loads metadata| META[SQLModel metadata]
+  CMD -->|applies DDL| PG
+  IMG --> API
+  API --> DBSESS --> PG
+  API --> REPO --> PG
+  VER --> CMD
+  META --> ENV
+```
+## Alembic
 
-  SV --> M
-  SV -->|uses| Repo
-  Repo -->|reads| SQLF
-  Repo --> T
-
-  DB --> PG[(PostgreSQL)]
-  Repo --> PG
-
-  %% migrations path (operational)
-  A1 --> A2
-  A2 -->|upgrade / downgrade| PG
-  A1 -->|uses metadata| T
-
-
+```mermaid
+flowchart LR
+  Dev[Developer] -->|commit migrations| VER[alembic/versions/*]
+  VER -->|release| CD[Deploy pipeline]
+  CD -->|alembic upgrade head| PG[(PostgreSQL schema)]
+  PG -->|start app| API[FastAPI runtime]
 ```
 
 ## Request flow: Create category
