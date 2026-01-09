@@ -14,24 +14,38 @@ flowchart TB
   subgraph Domain[domain - Business rules]
     M[Models: Value Objects and Entities]
     E[Domain Errors]
+    SV[domain/services]
   end
 
   subgraph DataAccess[data_access - Persistence]
     DB[db/session.py]
     T[models - SQLModel tables]
     Repo[repositories - SQL and mapping]
+    SQLF[repositories/sql files]
+  end
+
+  subgraph Migrations[alembic - schema versioning]
+    A1[alembic/env.py]
+    A2[alembic/versions/*]
   end
 
   R --> S
   R -->|Depends get_session| DB
-  R -->|calls| SV[domain/services/mycategory_service.py]
+  R -->|calls| SV
 
   SV --> M
   SV -->|uses| Repo
-  Repo -->|reads| SQLF[repositories/sql files]
+  Repo -->|reads| SQLF
   Repo --> T
+
   DB --> PG[(PostgreSQL)]
   Repo --> PG
+
+  %% migrations path (operational)
+  A1 --> A2
+  A2 -->|upgrade / downgrade| PG
+  A1 -->|uses metadata| T
+
 
 ```
 
