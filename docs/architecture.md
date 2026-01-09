@@ -5,32 +5,33 @@ This repo follows a simple layered architecture.
 ## Layers
 
 ```mermaid
-sequenceDiagram
-  participant C as Client
-  participant API as FastAPI Router
-  participant SC as Schemas (Pydantic)
-  participant SV as Service
-  participant DM as Domain Models
-  participant RP as Repository
-  participant PG as Postgres
+flowchart TB
+  subgraph Presentation[presentation - FastAPI]
+    R[Routers]
+    S[Schemas]
+  end
 
-  C->>API: POST /category
-  API->>SC: parse and validate request body
-  SC-->>API: validated input (dict)
+  subgraph Domain[domain - Business rules]
+    M[Models: Value Objects and Entities]
+    E[Domain Errors]
+  end
 
-  API->>SV: create(validated input)
-  SV->>DM: CategoryName and CategoryColor validation
-  DM-->>SV: validated values
+  subgraph DataAccess[data_access - Persistence]
+    DB[db/session.py]
+    T[models - SQLModel tables]
+    Repo[repositories - SQL and mapping]
+  end
 
-  SV->>RP: insert(valid values)
-  RP->>PG: SQL file and params
-  PG-->>RP: inserted row
-  RP-->>SV: domain object
+  R --> S
+  R -->|Depends get_session| DB
+  R -->|calls| SV[domain/services/mycategory_service.py]
 
-  SV-->>API: domain object
-  API->>SC: build response model
-  SC-->>API: response DTO
-  API-->>C: 200 OK (response)
+  SV --> M
+  SV -->|uses| Repo
+  Repo -->|reads| SQLF[repositories/sql files]
+  Repo --> T
+  DB --> PG[(PostgreSQL)]
+  Repo --> PG
 
 ```
 
