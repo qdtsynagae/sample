@@ -41,21 +41,29 @@ flowchart TB
 sequenceDiagram
   participant C as Client
   participant API as FastAPI Router
+  participant SC as Schemas (Pydantic)
   participant SV as Service
   participant DM as Domain Models
   participant RP as Repository
   participant PG as Postgres
 
   C->>API: POST /category
-  API->>SV: create(...)
-  SV->>DM: CategoryName(...) / CategoryColor(...)
-  DM-->>SV: (validated)
-  SV->>RP: insert(validated values)
-  RP->>PG: SQL file + params
+  API->>SC: parse and validate request body
+  SC-->>API: validated input (dict)
+
+  API->>SV: create(validated input)
+  SV->>DM: CategoryName and CategoryColor validation
+  DM-->>SV: validated values
+
+  SV->>RP: insert(valid values)
+  RP->>PG: SQL file and params
   PG-->>RP: inserted row
   RP-->>SV: domain object
-  SV-->>API: response dict
-  API-->>C: 200 OK
+
+  SV-->>API: domain object
+  API->>SC: build response model
+  SC-->>API: response DTO
+  API-->>C: 200 OK (response)
 ```
 
 ## Key decisions
